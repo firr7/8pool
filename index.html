@@ -21,22 +21,39 @@ button,input{display:block;width:100%;margin:8px 0;padding:13px;border-radius:12
 button{background:#e8c36a;color:#1a1208;font-weight:700;cursor:pointer}button:active{transform:scale(.97)}
 input{text-align:center;text-transform:uppercase;letter-spacing:8px}
 #code{font-size:34px;letter-spacing:8px;margin-top:10px;color:#e8c36a}
+#menu{overflow:hidden;background:radial-gradient(ellipse at 50% 42%,#23744b 0,#124530 45%,#04110b 100%)}
+#menu::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,#ffffff06 0 2px,transparent 2px 7px)}
+#menu::after{content:'';position:absolute;inset:16px;border:12px solid #5a3515;border-radius:40px;pointer-events:none;z-index:1;box-shadow:inset 0 0 0 3px #e8c36a66,inset 0 0 90px #000,0 0 0 4px #2a1708}
+.card{position:relative;z-index:2;max-height:92vh;overflow:auto}
+.card h1{letter-spacing:3px;text-shadow:0 3px 0 #5a3515,0 6px 14px #000}
+.eight{width:62px;height:62px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;color:#111;background:radial-gradient(circle at 50% 50%,#fff 0 40%,transparent 41%),radial-gradient(circle at 35% 30%,#666,#000 70%);box-shadow:0 8px 16px #000a}
+.fb{position:absolute;z-index:1;width:var(--s);height:var(--s);border-radius:50%;box-shadow:0 10px 18px #0009;animation:fl 9s ease-in-out infinite alternate}
+@keyframes fl{to{transform:translate(26px,-34px) rotate(50deg)}}
+.cue{position:absolute;z-index:1;left:-80px;bottom:16%;width:560px;height:11px;border-radius:6px;transform:rotate(-22deg);background:linear-gradient(90deg,#241206,#d9a35c 72%,#f3dfb0 96%,#4aa3d8 96%);box-shadow:0 10px 14px #000a}
+@media(max-height:560px){.eight{display:none}}
+@media(prefers-reduced-motion:reduce){.fb{animation:none}}
+.ov{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;background:#000b}#pop{z-index:7}
+#pb{position:fixed;top:12px;right:12px;z-index:3;width:42px;height:42px;padding:0;margin:0;border-radius:50%;background:#000a;color:#e8c36a;border:2px solid #c9a35a55;font-size:12px}
+.alt{background:#3a2a22;color:#f4ead2;border:1px solid #c9a35a77}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud"><div class="pl" id="p0"></div><div class="pl" id="p1"></div></div>
 <div id="pw"><div id="pwb"></div></div><div id="msg"></div>
-<div id="menu"><div class="card"><h1>Biliardo 8</h1><p>Palle piene contro rigate</p>
+<div id="menu"><div class="cue"></div><div class="card"><div class="eight">8</div><h1>Biliardo 8</h1><p>Palle piene contro rigate</p>
 <button onclick="local()">Gioca in locale (2 giocatori)</button>
 <button onclick="host()">Crea partita online</button>
 <input id="ci" maxlength="4" placeholder="CODICE">
 <button onclick="join()">Unisciti con il codice</button><div id="code"></div></div></div>
+<button id="pb" onclick="pause(1)" aria-label="Pause">❚❚</button>
+<div id="pause" class="ov"><div class="card"><h1>Paused</h1><button onclick="pause(0)">Resume</button><button id="sb" onclick="toggleSnd()">Sound effects: On</button><button class="alt" onclick="quit()">Quit match</button></div></div>
+<div id="pop" class="ov"><div class="card"><h1 id="pt"></h1><p id="px"></p><button id="pbtn" onclick="closePop()">OK</button></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),$=i=>document.getElementById(i);
 const W=1000,H=500,R=12,PR=[[0,0,28],[500,-8,26],[1000,0,28],[0,500,28],[500,508,26],[1000,500,28]];
 const COL=['#f5f3ea','#f2c200','#1e5bd8','#d62b2b','#6a2fa8','#f07a12','#1c9b4b','#8a1b1b','#111'];
 const col=n=>COL[n>8?n-8:n],grp=n=>n==8?2:n<8?0:1;
-let G,S,A={a:0,p:0},OA=null,mode,me=0,moving=false,shooter=0,conn,pull=null,sc=1,ox=0,oy=0,dp=1,ac,peer,lastAim=0,TC,SP,ph='';
+let G,S,A={a:0,p:0},OA=null,mode,me=0,moving=false,shooter=0,conn,pull=null,sc=1,ox=0,oy=0,dp=1,ac,peer,lastAim=0,TC,SP,ph='',inGame=false,paused=false,mute=false,ended=false,popMenu=0;
 const nm=i=>mode=='local'?'Player '+(i+1):i==me?'You':'Opponent';
 const tn=i=>mode=='local'?'Player '+(i+1)+"'s turn":i==me?'Your turn':"Opponent's turn";
 const left=k=>G.balls.filter(b=>b.n&&b.n!=8&&grp(b.n)==k&&!b.in).length;
@@ -52,7 +69,7 @@ function newGame(){
  for(let r=0;r<5;r++)for(let k=0;k<=r;k++)b.push({n:o[i++],x:700+r*21,y:250+(k-r/2)*24.2,vx:0,vy:0,in:false});
  G={balls:b,turn:0,groups:[null,null],bih:false,over:-1};
 }
-function snd(v){v=Math.min(1,v);if(v<.05||!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=280+Math.random()*120;g.gain.value=v*.25;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.09);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.09)}
+function snd(v){v=Math.min(1,v);if(v<.05||!ac||mute)return;const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=280+Math.random()*120;g.gain.value=v*.25;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.09);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.09)}
 function step(){const bs=G.balls,dt=.125;
  for(let s=0;s<8;s++){
   for(const b of bs){if(b.in)continue;b.x+=b.vx*dt;b.y+=b.vy*dt;b.vx*=.9982;b.vy*=.9982;
@@ -80,8 +97,10 @@ function evaluate(){const m=G.turn,g=G.groups,pk=S.pot,cue=G.balls[0];
  hud()}
 function hud(){for(let i=0;i<2;i++){const g=G.groups[i],e=$('p'+i);e.className='pl'+(G.turn==i&&G.over<0?' on':'');
  e.innerHTML=`<b>${nm(i)}</b><small>${g==null?'Open table':g?'Stripes':'Solids'}</small><div class="dots">${g==null?'':G.balls.filter(b=>b.n&&b.n!=8&&grp(b.n)==g&&b.in).map(b=>`<i style="background:${col(b.n)}"></i>`).join('')}</div>`}
- $('msg').textContent=G.over>=0?(nm(G.over)=='You'?'You win!':nm(G.over)+' wins!')+' Tap to restart':tn(G.turn)}
-const myTurn=()=>G&&G.over<0&&!moving&&$('menu').style.display=='none'&&(mode=='local'||G.turn==me);
+ $('msg').textContent=G.over>=0?'':tn(G.turn);
+ if(G.over>=0&&!ended){ended=true;const w=mode=='local'||G.over==me,l=mode=='local';
+  setTimeout(()=>{if(inGame)popup(l?nm(G.over)+' wins!':w?'You win!':'You lose',l?'Congratulations on the 8 ball!':w?'You sank the 8 ball. Well played!':'Your opponent sank the 8 ball.','Main menu',1)},700)}}
+const myTurn=()=>G&&G.over<0&&!moving&&!paused&&$('menu').style.display=='none'&&(mode=='local'||G.turn==me);
 const pt=e=>({x:(e.clientX-ox)/sc-50,y:(e.clientY-oy)/sc-50});
 const okPos=(x,y)=>x>R&&x<W-R&&y>R&&y<H-R&&G.balls.every(b=>b.n==0||b.in||Math.hypot(b.x-x,b.y-y)>2*R);
 const send=d=>conn&&conn.open&&conn.send(d);
@@ -92,7 +111,7 @@ cv.addEventListener('pointermove',e=>{if(!myTurn())return;const m=pt(e),c=G.ball
  else A.a=Math.atan2(m.y-c.y,m.x-c.x);
  const n=performance.now();if(n-lastAim>45){lastAim=n;send({t:'aim',a:A.a,p:A.p})}});
 cv.addEventListener('pointerdown',e=>{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
- if(G&&G.over>=0)return location.reload();
+
  if(!myTurn())return;const m=pt(e),c=G.balls[0];
  if(G.bih){c.x=m.x;c.y=m.y;if(okPos(m.x,m.y)){G.bih=false;hud();send({t:'place',x:c.x,y:c.y})}return}
  pull={s:m,touch:e.pointerType=='touch'};cv.setPointerCapture(e.pointerId);cv.dispatchEvent(new PointerEvent('pointermove',e))});
@@ -102,9 +121,23 @@ function net(){conn.on('data',d=>{
  if(d.t=='init'){apply(d.s);start()}else if(d.t=='aim')OA=d;
  else if(d.t=='shot')launch(d.vx,d.vy);
  else if(d.t=='state'){apply(d.s);moving=false;hud()}
- else if(d.t=='place'){G.balls[0].x=d.x;G.balls[0].y=d.y;G.bih=false;hud()}});
- conn.on('close',()=>$('msg').textContent='Avversario disconnesso')}
-function start(){$('menu').style.display='none';hud()}
+ else if(d.t=='place'){G.balls[0].x=d.x;G.balls[0].y=d.y;G.bih=false;hud()}
+ else if(d.t=='quit')gone()});
+ conn.on('close',gone)}
+const gone=()=>{if(inGame&&G&&G.over<0)toMenu('Your opponent left the match.')};
+function start(){inGame=true;ended=false;$('menu').style.display='none';hud()}
+function popup(t,x,b,m){$('pt').textContent=t;$('px').textContent=x;$('pbtn').textContent=b;popMenu=m;$('pop').style.display='flex'}
+function closePop(){$('pop').style.display='none';if(popMenu)toMenu()}
+function pause(v){if(!inGame||(G&&G.over>=0))return;paused=!!v;pull=null;A.p=0;$('pause').style.display=v?'flex':'none'}
+function toggleSnd(){mute=!mute;$('sb').textContent='Sound effects: '+(mute?'Off':'On')}
+function quit(){send({t:'quit'});toMenu()}
+function toMenu(t){const c=conn,p=peer;conn=peer=null;inGame=false;paused=false;
+ setTimeout(()=>{try{c&&c.close();p&&p.destroy()}catch(e){}},300);
+ G=null;moving=false;pull=null;OA=null;A.p=0;
+ for(const i of['pause','pop'])$(i).style.display='none';
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+ $('code').textContent='';$('menu').style.display='flex';
+ if(t)popup('Opponent disconnected',t,'Close',0)}
 function local(){mode='local';newGame();start()}
 function host(){if(typeof Peer=='undefined')return alert('Servono internet e PeerJS per il multiplayer');
  const code=[...Array(4)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');
@@ -164,7 +197,7 @@ function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.heig
   else if(OA)stick(OA.a,OA.p,.8)}
  const h=A.p*100+'%';if(h!=ph){ph=h;$('pwb').style.height=h}}
 let last=0,acc=0;
-function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);last=t;if(!G||!TC)return;acc+=d;
+function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);last=t;if(!G||!TC||(paused&&mode=='local'))return;acc+=d;
  while(acc>=16.667){acc-=16.667;
   if(moving){step();if(!G.balls.some(b=>!b.in&&(b.vx||b.vy))){moving=false;
    if(mode=='local'||shooter==me){evaluate();send({t:'state',s:ser()})}}}
@@ -172,5 +205,9 @@ function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);las
    if(Math.abs(b.tx-b.x)+Math.abs(b.ty-b.y)<.2){b.x=b.tx;b.y=b.ty;b.tx=null}}}
  draw()}
 requestAnimationFrame(loop);
+addEventListener('keydown',e=>{if(e.key=='Escape')pause(!paused)});
+[1,2,3,4,5,6,7,9,10,11,12,13,14,15].forEach(n=>{const d=document.createElement('div'),s=30+Math.random()*44,c=col(n);
+ d.className='fb';d.style.cssText=`--s:${s}px;left:${Math.random()*93}%;top:${Math.random()*90}%;animation-delay:-${Math.random()*9}s;animation-duration:${7+Math.random()*7}s;background:radial-gradient(circle at 35% 30%,#fffa,transparent 38%),`+(n>8?`linear-gradient(#f5f3ea 28%,${c} 28% 72%,#f5f3ea 72%)`:c);
+ $('menu').prepend(d)});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
