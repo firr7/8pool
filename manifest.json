@@ -1,0 +1,13 @@
+{
+  "name": "Biliardo 8",
+  "short_name": "Biliardo",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#08150f",
+  "theme_color": "#08150f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
