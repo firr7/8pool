@@ -1,3 +1,3 @@
-# 8pool
+# 8pool 🎱
 
 https://firr7.github.io/8pool
