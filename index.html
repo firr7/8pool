@@ -48,17 +48,52 @@ input{user-select:text;-webkit-user-select:text}
 #cm{margin:0;padding:9px;font-size:16px;background:#ffffff1a;color:#f4ead2;border:1px solid #c9a35a55;text-transform:none;letter-spacing:0;text-align:left}
 #cp{position:fixed;right:48px;top:50%;transform:translateY(-50%);max-width:40vw;padding:6px 12px;border-radius:12px;background:#000c;font-size:13px;z-index:3;opacity:0;transition:opacity .3s;pointer-events:none}
 .alt{background:#3a2a22;color:#f4ead2;border:1px solid #c9a35a77}
+#menu{align-items:stretch;justify-content:flex-start}
+#menu::after{inset:0;border:0;border-radius:0;box-shadow:inset 0 0 140px #000}
+#menu .cue{left:auto;right:-90px;bottom:14%;transform:rotate(-24deg)}
+.mp{position:relative;z-index:2;width:min(400px,100%);height:100%;overflow-y:auto;padding:28px 26px;background:linear-gradient(90deg,#071710f5,#0b2218dd);border-right:2px solid #c9a35a66;box-shadow:12px 0 40px #000a;display:flex;flex-direction:column}
+.mp h1{margin:0;font-size:30px;color:#e8c36a;letter-spacing:3px;text-shadow:0 3px 0 #5a3515,0 6px 14px #000}
+.mp p{margin:3px 0 0;opacity:.65;font-size:13px}
+.logo{display:flex;align-items:center;gap:14px}.logo .eight{margin:0;width:54px;height:54px;font-size:26px;flex:none}
+.sec{margin:20px 0 4px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e8c36a;opacity:.85}
+.mb{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#ffffff12;color:#f4ead2;border:1px solid #c9a35a44;font-weight:400}
+.mb:hover{background:#ffffff1f}.mb.pri{background:#e8c36a;color:#1a1208;border-color:#e8c36a}
+.mb b{display:block;font-size:16px}.mb small{display:block;opacity:.7;font-size:12px;margin-top:2px}
+.mb em{font-style:normal;color:#e8c36a;letter-spacing:2px;font-size:13px}.mb.pri em{color:#1a1208}
+.chev{font-style:normal;font-size:20px;transition:transform .25s}.mb.o .chev{transform:rotate(180deg)}
+#bots{display:grid;gap:6px;max-height:0;overflow:hidden;transition:max-height .3s}#bots.o{max-height:230px}
+.lv{margin:0 0 0 14px;width:calc(100% - 14px);border-left:3px solid #e8c36a}
+.row{display:flex;gap:8px}.row input{flex:1;min-width:0;margin:8px 0}.row button{width:auto;flex:none;margin:8px 0}
+#code{text-align:center;font-size:30px;margin-top:6px}
+.hint{margin-top:auto;padding-top:18px;font-size:12px;opacity:.55}
+.hero{position:absolute;z-index:1;right:9vw;top:50%;width:min(36vmin,320px);aspect-ratio:1;margin-top:calc(min(36vmin,320px)/-2);border-radius:50%;background:radial-gradient(circle at 50% 50%,#fff 0 27%,transparent 28%),radial-gradient(circle at 35% 28%,#777,#111 45%,#000 75%);box-shadow:0 30px 60px #000c,inset -10px -14px 30px #000a;animation:fl 12s ease-in-out infinite alternate}
+.hero::after{content:'8';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 min(18vmin,160px)/1 Roboto,Arial,sans-serif;color:#000}
+@media(max-width:760px){.hero{display:none}}
+@media(max-height:560px){.mp{padding:14px 20px}.mp p,.hint,.mb small{display:none}.sec{margin-top:10px}.mb{padding:9px 13px}}
+@media(prefers-reduced-motion:reduce){.hero{animation:none}}
+#code{margin:8px 0;padding:12px;border:1px dashed #e8c36a88;border-radius:12px;background:#0006;font-size:30px;letter-spacing:8px;cursor:pointer;text-align:center;color:#e8c36a}
+#code:empty{display:none}#code small{display:block;letter-spacing:0;font-size:12px;opacity:.7;margin-top:4px;color:#f4ead2}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud"><div class="pl" id="p0"></div><div class="pl" id="p1"></div></div>
 <div id="pw"><div id="pwb"></div></div><div id="msg"></div>
-<div id="menu"><div class="cue"></div><div class="card"><div class="eight">8</div><h1>Biliardo 8</h1><p>Palle piene contro rigate</p>
-<button onclick="local()">Gioca in locale (2 giocatori)</button>
-<small style="display:block;opacity:.7;margin-top:8px">Sfida il bot</small>
-<div style="display:flex;gap:6px"><button onclick="botGame('easy')">Easy</button><button onclick="botGame('medium')">Medium</button><button onclick="botGame('hard')">Hard</button></div>
-<button onclick="host()">Crea partita online</button>
-<input id="ci" maxlength="4" placeholder="CODICE">
-<button onclick="join()">Unisciti con il codice</button><div id="code"></div></div></div>
+<div id="menu"><div class="cue"></div><div class="hero"></div>
+<aside class="mp">
+<div class="logo"><div class="eight">8</div><div><h1>Biliardo 8</h1><p>Palle piene contro rigate</p></div></div>
+<div class="sec">Gioca</div>
+<button class="mb" onclick="this.classList.toggle('o');document.getElementById('bots').classList.toggle('o')"><span><b>Contro il bot</b><small>Scegli la difficoltà</small></span><i class="chev">▾</i></button>
+<div id="bots">
+<button class="mb lv" onclick="botGame('easy')"><span><b>Easy</b><small>Rilassato, sbaglia spesso</small></span><em>●○○</em></button>
+<button class="mb lv" onclick="botGame('medium')"><span><b>Medium</b><small>Preciso, ma battibile</small></span><em>●●○</em></button>
+<button class="mb lv" onclick="botGame('hard')"><span><b>Hard</b><small>Calcola i tiri, quasi senza errori</small></span><em>●●●</em></button>
+</div>
+<button class="mb" onclick="local()"><span><b>Locale</b><small>2 giocatori sullo stesso schermo</small></span><i class="chev">›</i></button>
+<div class="sec">Online</div>
+<button class="mb" onclick="host()"><span><b>Crea partita</b><small>Ricevi un codice da dare all'amico</small></span><i class="chev">›</i></button>
+<div id="code"></div>
+<div class="row"><input id="ci" maxlength="4" placeholder="CODICE"><button class="mb pri" onclick="join()">Unisciti</button></div>
+<div class="hint">Trascina la stecca all'indietro per caricare il tiro · Esc per la pausa</div>
+</aside></div>
 <button id="ct" onclick="chat()" aria-label="Chat">💬<b id="cb"></b></button>
 <div id="cw"><div id="ch"><span>Chat</span><button onclick="chat(false)" aria-label="Close chat">✕</button></div><div id="cl"></div><input id="cm" maxlength="120" placeholder="Message…" autocomplete="off"></div><div id="cp"></div>
 <button id="pb" onclick="pause(1)" aria-label="Pause">❚❚</button>
@@ -158,12 +193,15 @@ function toMenu(t){const c=conn,p=peer;conn=peer=null;inGame=false;paused=false;
  $('code').textContent='';$('menu').style.display='flex';
  if(t)popup('Opponent disconnected',t,'Close',0)}
 function local(){mode='local';newGame();start()}
-function host(){if(typeof Peer=='undefined')return alert('Servono internet e PeerJS per il multiplayer');
+function host(){const o=$('code'),st=t=>o.innerHTML='<small>'+t+'</small>';
+ if(typeof Peer=='undefined')return st('Libreria PeerJS non caricata: controlla la connessione o i blocchi contenuti');
+ if(peer){try{peer.destroy()}catch(e){}}
  const code=[...Array(4)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');
- peer=new Peer('p8pool-'+code);
- peer.on('open',()=>$('code').innerHTML=code+'<p>Invia il codice all\'amico e attendi…</p>');
- peer.on('error',e=>e.type=='unavailable-id'?host():alert('Errore: '+e.type));
- peer.on('connection',c=>{conn=c;c.on('open',()=>{me=0;mode='net';newGame();send({t:'init',s:ser()});net();start()})})}
+ st('Connessione al servizio di collegamento…');
+ const p=peer=new Peer('p8pool-'+code),to=setTimeout(()=>{if(peer==p&&!p.open)st("Il servizio di collegamento (0.peerjs.com) non risponde dalla tua rete. Prova senza VPN o blocco contenuti, oppure con un'altra rete.")},8000);
+ p.on('open',()=>{clearTimeout(to);o.innerHTML=code+'<p>Invia il codice all\'amico e attendi…</p>'});
+ p.on('error',e=>{clearTimeout(to);if(e.type=='unavailable-id')host();else st('Errore di connessione: '+e.type)});
+ p.on('connection',c=>{conn=c;c.on('open',()=>{me=0;mode='net';newGame();send({t:'init',s:ser()});net();start()})})}
 function join(){const code=$('ci').value.trim().toUpperCase();if(code.length<4)return;
  if(typeof Peer=='undefined')return alert('Servono internet e PeerJS per il multiplayer');
  $('code').textContent='Connessione…';peer=new Peer();
@@ -269,7 +307,7 @@ addEventListener('keydown',e=>{const o=$('cw').classList.contains('o');
  if(e.key=='Escape')o?chat(false):pause(!paused);
  else if(e.key=='Enter'){if(document.activeElement==$('cm'))sendChat();else if(inGame&&mode=='net')chat(true)}});
 [1,2,3,4,5,6,7,9,10,11,12,13,14,15].forEach(n=>{const d=document.createElement('div'),s=30+Math.random()*44,c=col(n);
- d.className='fb';d.style.cssText=`--s:${s}px;left:${Math.random()*93}%;top:${Math.random()*90}%;animation-delay:-${Math.random()*9}s;animation-duration:${7+Math.random()*7}s;background:radial-gradient(circle at 35% 30%,#fffa,transparent 38%),`+(n>8?`linear-gradient(#f5f3ea 28%,${c} 28% 72%,#f5f3ea 72%)`:c);
+ d.className='fb';d.style.cssText=`--s:${s}px;left:${42+Math.random()*52}%;top:${Math.random()*90}%;animation-delay:-${Math.random()*9}s;animation-duration:${7+Math.random()*7}s;background:radial-gradient(circle at 35% 30%,#fffa,transparent 38%),`+(n>8?`linear-gradient(#f5f3ea 28%,${c} 28% 72%,#f5f3ea 72%)`:c);
  $('menu').prepend(d)});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
