@@ -54,6 +54,8 @@ input{user-select:text;-webkit-user-select:text}
 <div id="pw"><div id="pwb"></div></div><div id="msg"></div>
 <div id="menu"><div class="cue"></div><div class="card"><div class="eight">8</div><h1>Biliardo 8</h1><p>Palle piene contro rigate</p>
 <button onclick="local()">Gioca in locale (2 giocatori)</button>
+<small style="display:block;opacity:.7;margin-top:8px">Sfida il bot</small>
+<div style="display:flex;gap:6px"><button onclick="botGame('easy')">Easy</button><button onclick="botGame('medium')">Medium</button><button onclick="botGame('hard')">Hard</button></div>
 <button onclick="host()">Crea partita online</button>
 <input id="ci" maxlength="4" placeholder="CODICE">
 <button onclick="join()">Unisciti con il codice</button><div id="code"></div></div></div>
@@ -69,8 +71,8 @@ const W=1000,H=500,R=12,PR=[[0,0,28],[500,-8,26],[1000,0,28],[0,500,28],[500,508
 const COL=['#f5f3ea','#f2c200','#1e5bd8','#d62b2b','#6a2fa8','#f07a12','#1c9b4b','#8a1b1b','#111'];
 const col=n=>COL[n>8?n-8:n],grp=n=>n==8?2:n<8?0:1;
 let G,S,A={a:0,p:0},OA=null,mode,me=0,moving=false,shooter=0,conn,pull=null,sc=1,ox=0,oy=0,dp=1,ac,peer,lastAim=0,TC,SP,ph='',inGame=false,paused=false,mute=false,ended=false,popMenu=0;
-const nm=i=>mode=='local'?'Player '+(i+1):i==me?'You':'Opponent';
-const tn=i=>mode=='local'?'Player '+(i+1)+"'s turn":i==me?'Your turn':"Opponent's turn";
+const nm=i=>mode=='local'?'Player '+(i+1):i==me?'You':mode=='bot'?'Bot':'Opponent';
+const tn=i=>mode=='local'?'Player '+(i+1)+"'s turn":i==me?'Your turn':mode=='bot'?"Bot's turn":"Opponent's turn";
 const left=k=>G.balls.filter(b=>b.n&&b.n!=8&&grp(b.n)==k&&!b.in).length;
 const ser=()=>({b:G.balls.map(q=>[q.n,q.x,q.y,q.in?1:0]),t:G.turn,g:G.groups,h:G.bih,o:G.over});
 const apply=s=>{
@@ -152,7 +154,7 @@ function toMenu(t){const c=conn,p=peer;conn=peer=null;inGame=false;paused=false;
  G=null;moving=false;pull=null;OA=null;A.p=0;
  for(const i of['pause','pop'])$(i).style.display='none';
  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
- $('ct').style.display='none';chat(false);$('cl').innerHTML='';unread=0;$('cb').style.display='none';
+ clearTimeout(bt);bt=0;$('ct').style.display='none';chat(false);$('cl').innerHTML='';unread=0;$('cb').style.display='none';
  $('code').textContent='';$('menu').style.display='flex';
  if(t)popup('Opponent disconnected',t,'Close',0)}
 function local(){mode='local';newGame();start()}
@@ -214,14 +216,47 @@ function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.heig
   else if(OA)stick(OA.a,OA.p,.8)}
  const h=A.p*100+'%';if(h!=ph){ph=h;$('pwb').style.height=h}}
 let last=0,acc=0;
-function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);last=t;if(!G||!TC||(paused&&mode=='local'))return;acc+=d;
+function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);last=t;if(!G||!TC||(paused&&mode!='net'))return;
+ if(mode=='bot'&&G.turn==1&&!moving&&G.over<0&&!bt)bt=setTimeout(botPlay,900);acc+=d;
  while(acc>=16.667){acc-=16.667;
   if(moving){step();if(!G.balls.some(b=>!b.in&&(b.vx||b.vy))){moving=false;
-   if(mode=='local'||shooter==me){evaluate();send({t:'state',s:ser()})}}}
+   if(mode!='net'||shooter==me){evaluate();send({t:'state',s:ser()})}}}
   for(const b of G.balls)if(b.tx!=null){b.x+=(b.tx-b.x)*.3;b.y+=(b.ty-b.y)*.3;
    if(Math.abs(b.tx-b.x)+Math.abs(b.ty-b.y)<.2){b.x=b.tx;b.y=b.ty;b.tx=null}}}
  draw()}
 requestAnimationFrame(loop);
+let bt=0,lvl='medium';
+function botGame(l){lvl=l;mode='bot';me=0;newGame();start()}
+const legal=b=>{const g=G.groups[1],t=g==null?null:left(g)?g:2;return b.n&&!b.in&&(t==null?b.n!=8:t==2?b.n==8:grp(b.n)==t)};
+const pw=q=>Math.min(1,Math.max(.25,(q.d+q.td+200)/69.4/32));
+const clear=(ax,ay,bx,by,ex)=>{const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy||1;
+ return G.balls.every(b=>b.in||ex.includes(b.n)||Math.hypot(ax+dx*Math.max(0,Math.min(1,((b.x-ax)*dx+(b.y-ay)*dy)/L))-b.x,ay+dy*Math.max(0,Math.min(1,((b.x-ax)*dx+(b.y-ay)*dy)/L))-b.y)>2*R)};
+function botShots(){const c=G.balls[0],out=[];
+ for(const t of G.balls)if(legal(t))for(const p of PR){
+  const ux=500-p[0],uy=250-p[1],k=Math.hypot(ux,uy),ax=p[0]+ux/k*10,ay=p[1]+uy/k*10,
+   tx=ax-t.x,ty=ay-t.y,td=Math.hypot(tx,ty),nx=tx/td,ny=ty/td,gx=t.x-nx*2*R,gy=t.y-ny*2*R;
+  if(gx<R||gx>W-R||gy<R||gy>H-R)continue;
+  const cx=gx-c.x,cy=gy-c.y,cd=Math.hypot(cx,cy);if(cd<1)continue;
+  const dt=(cx*nx+cy*ny)/cd;
+  if(dt<.25||!clear(c.x,c.y,gx,gy,[0,t.n])||!clear(t.x,t.y,ax,ay,[0,t.n]))continue;
+  out.push({a:Math.atan2(cy,cx),d:cd,td,s:dt-(cd+td)/2500,t:t.n})}
+ return out.sort((a,b)=>b.s-a.s)}
+function simShot(vx,vy){const sg=G,ss=S,sm=mute;mute=true;G=JSON.parse(JSON.stringify(sg));S={first:null,pot:[],left0:0};
+ G.balls[0].vx=vx;G.balls[0].vy=vy;let n=0;while(n++<1500&&G.balls.some(b=>!b.in&&(b.vx||b.vy)))step();
+ const r={pot:S.pot,cue:G.balls[0].in};G=sg;S=ss;mute=sm;return r}
+function botPlay(){if(!G||mode!='bot'||moving||paused||G.turn!=1||G.over>=0){bt=0;return}
+ const c=G.balls[0];
+ if(G.bih){for(let i=0;i<300;i++){const x=60+Math.random()*240,y=40+Math.random()*420;if(okPos(x,y)){c.x=x;c.y=y;break}}G.bih=false;hud()}
+ const sh=botShots();let s=sh[0],a,p;
+ if(lvl=='easy'&&sh.length&&Math.random()<.8)s=sh[Math.random()*sh.length|0];
+ if(lvl=='hard'&&sh.length)s=sh.slice(0,8).map(q=>{const r=simShot(Math.cos(q.a)*pw(q)*32,Math.sin(q.a)*pw(q)*32);return[q,(r.pot.includes(q.t)?3:0)-(r.cue?5:0)+q.s]}).sort((x,y)=>y[1]-x[1])[0][0];
+ if(s){a=s.a;p=pw(s)}
+ else{let best=null,bd=1e9;for(const b of G.balls)if(legal(b)){const d=Math.hypot(b.x-c.x,b.y-c.y);if(d<bd){bd=d;best=b}}
+  a=Math.atan2(best.y-c.y,best.x-c.x);p=G.balls.every(b=>!b.in)&&G.groups[0]==null?.95:.5}
+ const er=lvl=='easy'?.12:lvl=='medium'?.035:.008,pe=lvl=='easy'?.35:lvl=='medium'?.15:.05;
+ a+=(Math.random()-.5)*2*er;p=Math.max(.15,Math.min(1,p*(1+(Math.random()-.5)*2*pe)));
+ OA={a,p:0};setTimeout(()=>{if(OA)OA.p=p*.9},450);
+ setTimeout(()=>{if(inGame&&mode=='bot'&&G&&!moving&&G.turn==1)launch(Math.cos(a)*p*32,Math.sin(a)*p*32);bt=0},900)}
 let unread=0,pt2;
 function chat(v){const w=$('cw'),o=v===undefined?!w.classList.contains('o'):v;w.classList.toggle('o',o);$('ct').style.right=o?'min(250px,42vw)':'0';
  if(o){unread=0;$('cb').style.display='none';$('cp').style.opacity=0;setTimeout(()=>$('cm').focus(),260);$('cl').scrollTop=1e9}else $('cm').blur()}
