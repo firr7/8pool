@@ -4,7 +4,7 @@
 <meta name="theme-color" content="#08150f">
 <style>
 *{box-sizing:border-box;margin:0;user-select:none;-webkit-user-select:none}
-html,body{height:100%;background:radial-gradient(circle at 50% 35%,#16392c,#040a07);font-family:Georgia,'Times New Roman',serif;color:#f4ead2;overflow:hidden;touch-action:none}
+html,body{height:100%;background:radial-gradient(circle at 50% 35%,#16392c,#040a07);font-family:Roboto,Arial,Helvetica,sans-serif;color:#f4ead2;overflow:hidden;touch-action:none}
 canvas{position:fixed;inset:0;width:100%;height:100%}
 #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;gap:14px;padding:10px;z-index:2}
 .pl{flex:1;max-width:290px;padding:8px 14px;border-radius:14px;background:#000a;border:2px solid #c9a35a33;transition:.3s}
@@ -39,6 +39,9 @@ input{user-select:text;-webkit-user-select:text}
 #cb{position:absolute;top:-7px;left:-7px;min-width:18px;height:18px;border-radius:9px;background:#e33;color:#fff;font:700 11px/18px sans-serif;text-align:center;display:none}
 #cw{position:fixed;right:0;top:64px;bottom:64px;width:min(250px,42vw);transform:translateX(105%);transition:transform .25s;z-index:4;display:flex;flex-direction:column;background:#000d;border:2px solid #c9a35a55;border-right:0;border-radius:14px 0 0 14px;padding:8px}
 #cw.o{transform:none}
+#ct{z-index:5;transition:right .25s}
+#ch{display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px;font-weight:700;color:#e8c36a}
+#ch button{width:36px;height:36px;margin:0;padding:0;border-radius:50%;background:#ffffff1f;color:#f4ead2;font-size:16px}
 #cl{flex:1;overflow-y:auto;font-size:13px;display:flex;flex-direction:column;gap:5px;padding-bottom:6px}
 #cl p{margin:0;padding:5px 9px;border-radius:10px;background:#ffffff14;max-width:90%;word-break:break-word}
 #cl p.me{align-self:flex-end;background:#e8c36a33}
@@ -55,7 +58,7 @@ input{user-select:text;-webkit-user-select:text}
 <input id="ci" maxlength="4" placeholder="CODICE">
 <button onclick="join()">Unisciti con il codice</button><div id="code"></div></div></div>
 <button id="ct" onclick="chat()" aria-label="Chat">💬<b id="cb"></b></button>
-<div id="cw"><div id="cl"></div><input id="cm" maxlength="120" placeholder="Message…" autocomplete="off"></div><div id="cp"></div>
+<div id="cw"><div id="ch"><span>Chat</span><button onclick="chat(false)" aria-label="Close chat">✕</button></div><div id="cl"></div><input id="cm" maxlength="120" placeholder="Message…" autocomplete="off"></div><div id="cp"></div>
 <button id="pb" onclick="pause(1)" aria-label="Pause">❚❚</button>
 <div id="pause" class="ov"><div class="card"><h1>Paused</h1><button onclick="pause(0)">Resume</button><button id="sb" onclick="toggleSnd()">Sound effects: On</button><button class="alt" onclick="quit()">Quit match</button></div></div>
 <div id="pop" class="ov"><div class="card"><h1 id="pt"></h1><p id="px"></p><button id="pbtn" onclick="closePop()">OK</button></div></div>
@@ -220,7 +223,7 @@ function loop(t){requestAnimationFrame(loop);const d=Math.min(50,t-last||16);las
  draw()}
 requestAnimationFrame(loop);
 let unread=0,pt2;
-function chat(v){const w=$('cw'),o=v===undefined?!w.classList.contains('o'):v;w.classList.toggle('o',o);
+function chat(v){const w=$('cw'),o=v===undefined?!w.classList.contains('o'):v;w.classList.toggle('o',o);$('ct').style.right=o?'min(250px,42vw)':'0';
  if(o){unread=0;$('cb').style.display='none';$('cp').style.opacity=0;setTimeout(()=>$('cm').focus(),260);$('cl').scrollTop=1e9}else $('cm').blur()}
 function addMsg(x,mine){const p=document.createElement('p'),l=$('cl');p.textContent=x;if(mine)p.className='me';l.appendChild(p);
  while(l.children.length>50)l.firstChild.remove();l.scrollTop=1e9;
