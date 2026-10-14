@@ -100,6 +100,7 @@ select{width:100%;padding:11px;border-radius:12px;background:#ffffff1a;color:#f4
 #lcode{font-size:34px;letter-spacing:8px;color:#e8c36a;margin:6px 0 12px}
 #ls p{margin:4px 0;padding:7px 12px;border-radius:10px;background:#ffffff12;text-align:left;font-size:14px;opacity:1}
 .card label{display:block;text-align:left;font-size:12px;opacity:.8}
+#lst{font-size:13px;opacity:.8;margin-bottom:8px}#linv button{flex:1;margin:4px 0;padding:11px;font-size:14px}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud"><div class="pl" id="p0"></div><div class="pl" id="p1"></div><div id="brh"></div></div>
@@ -126,7 +127,7 @@ select{width:100%;padding:11px;border-radius:12px;background:#ffffff1a;color:#f4
 <button id="ct" onclick="chat()" aria-label="Chat">💬<b id="cb"></b></button>
 <div id="cw"><div id="ch"><span>Chat</span><button onclick="chat(false)" aria-label="Close chat">✕</button></div><div id="cl"></div><input id="cm" maxlength="120" placeholder="Message…" autocomplete="off"></div><div id="cp"></div>
 <button id="pb" onclick="pause(1)" aria-label="Pause">❚❚</button>
-<div id="lobby" class="ov"><div class="card"><h1>Battle Royale</h1><div id="lcode"></div><div id="ls"></div>
+<div id="lobby" class="ov"><div class="card"><h1>Battle Royale</h1><div id="lcode"></div><div id="lst"></div><div id="linv" class="row" style="display:none"><button class="alt" onclick="copyInv(0)">Copia codice</button><button onclick="copyInv(1)">Invita con link</button></div><div id="ls"></div>
 <div id="lset"><label>Giocatori totali<select id="ln" onchange="lobSet()"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
 <label>Difficoltà dei bot<select id="ll" onchange="lobSet()"><option value="random">Casuale</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="impossible">Impossible</option></select></label></div>
 <p id="lw">In attesa che l'host avvii la partita…</p>
@@ -243,9 +244,11 @@ function host(){const o=$('code'),st=t=>o.innerHTML='<small>'+t+'</small>';
  p.on('connection',c=>{conn=c;c.on('open',()=>{me=0;mode='net';newGame();send({t:'init',s:ser()});net();start()})})}
 function join(){const code=$('ci').value.trim().toUpperCase();if(code.length<4)return;
  if(typeof Peer=='undefined')return alert('Servono internet e PeerJS per il multiplayer');
- $('code').textContent='Connessione…';peer=new Peer();
- peer.on('error',e=>$('code').textContent='Partita non trovata');
- peer.on('open',()=>{conn=peer.connect('p8pool-'+code);conn.on('open',()=>{me=1;mode='net';net();$('code').textContent='Attendo il tavolo…'})})}
+ if(peer){try{peer.destroy()}catch(e){}}
+ let ok=0;$('code').textContent='Connessione…';
+ const p=peer=new Peer(),to=setTimeout(()=>{if(peer==p&&!ok)$('code').textContent='Nessuna risposta: controlla il codice e la connessione'},12000);
+ p.on('error',e=>{clearTimeout(to);$('code').textContent=e.type=='peer-unavailable'?'Partita non trovata':'Errore di connessione: '+e.type});
+ p.on('open',()=>{conn=p.connect('p8pool-'+code);conn.on('open',()=>{ok=1;clearTimeout(to);me=1;mode='net';net();$('code').textContent='Attendo il tavolo…'})})}
 function rs(){dp=devicePixelRatio||1;cv.width=innerWidth*dp;cv.height=innerHeight*dp;sc=Math.min(innerWidth/1100,(innerHeight-130)/600);ox=(innerWidth-1100*sc)/2;oy=(innerHeight-600*sc)/2+35;mk()}
 function mk(){const k=dp*sc;if(!(k>0))return;TC=document.createElement('canvas');TC.width=Math.ceil(1100*k);TC.height=Math.ceil(600*k);
  const t=TC.getContext('2d');t.setTransform(k,0,0,k,0,0);table(t);
@@ -323,10 +326,13 @@ function brRecv(d,s){if(s<1||!d)return;
  else if(d.t=='place'){bc(d,s);G.balls[0].x=d.x;G.balls[0].y=d.y;G.bih=false;hud()}
  else if(d.t=='chat'&&typeof d.x=='string'){bc(d,s);addMsg(d.x.slice(0,120),0,d.n)}}
 function hostBR(){if(typeof Peer=='undefined')return alert('Servono internet e PeerJS per il multiplayer');
+ if(peer){try{peer.destroy()}catch(e){}}
  const code=[...Array(4)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');
- mode='br';me=0;conns=Array(7).fill(null);lob.code=code;peer=new Peer('p8pool-'+code);
- peer.on('open',lobbyBc);
- peer.on('error',e=>e.type=='unavailable-id'?hostBR():alert('Errore: '+e.type));
+ mode='br';me=0;conns=Array(7).fill(null);lob.code=code;
+ renderLobby({n:lob.n,lvl:lob.lvl,h:1,c:'',seat:0,st:'Connessione al servizio di collegamento…'});
+ const p=peer=new Peer('p8pool-'+code),to=setTimeout(()=>{if(peer==p&&!p.open)$('lst').textContent='Il servizio di collegamento non risponde dalla tua rete. Riprova, oppure cambia rete.'},8000);
+ p.on('open',()=>{clearTimeout(to);lobbyBc()});
+ p.on('error',e=>{clearTimeout(to);if(e.type=='unavailable-id')hostBR();else $('lst').textContent='Errore di connessione: '+e.type});
  peer.on('connection',c=>{const s=conns.findIndex((x,i)=>i&&!x);
   if(s<1||inGame){c.on('open',()=>c.close());return}
   conns[s]=c;c.on('open',lobbyBc);c.on('data',d=>brRecv(d,conns?conns.indexOf(c):-1));
@@ -334,10 +340,14 @@ function hostBR(){if(typeof Peer=='undefined')return alert('Servono internet e P
 function lobbyBc(){if(!conns)return;const h=conns.filter(Boolean).length+1;lob.n=Math.max(lob.n,h);
  conns.forEach((c,i)=>c&&c.open&&c.send({t:'lobby',n:lob.n,lvl:lob.lvl,h,c:lob.code,seat:1+conns.slice(1,i).filter(Boolean).length}));
  renderLobby({n:lob.n,lvl:lob.lvl,h,c:lob.code,seat:0})}
-function renderLobby(d){$('lobby').style.display='flex';$('lcode').textContent=d.c||'';
+function renderLobby(d){$('lobby').style.display='flex';$('lcode').textContent=d.c||'';$('lst').textContent=d.st||(d.c&&conns?'Gli amici aprono il gioco, premono "Unisciti" e inseriscono il codice':'');$('linv').style.display=d.c&&conns?'flex':'none';
  $('ls').innerHTML=Array.from({length:d.n},(_,i)=>`<p>${i<d.h?(i?'Player '+(i+1):'Player 1 · host')+(i==d.seat?' · tu':''):'Bot · '+(d.lvl=='random'?'casuale':d.lvl)}</p>`).join('');
  const h=conns?'block':'none';$('lset').style.display=h;$('lgo').style.display=h;$('lw').style.display=conns?'none':'block';
  if(conns){$('ln').value=d.n;$('ll').value=d.lvl}}
+function copyInv(k){const c=lob.code,u=location.origin+location.pathname+'?join='+c,btn=$('linv').children[k];
+ const done=()=>{if(!btn)return;const t=btn.textContent;btn.textContent='Copiato!';setTimeout(()=>btn.textContent=t,1500)};
+ if(k&&navigator.share){navigator.share({title:'Biliardo 8',text:'Unisciti alla mia partita! Codice: '+c,url:u}).catch(()=>{});return}
+ const x=k?u:c;(navigator.clipboard?navigator.clipboard.writeText(x).then(done):Promise.reject()).catch(()=>prompt('Copia qui:',x))}
 function lobSet(){lob.n=+$('ln').value;lob.lvl=$('ll').value;lobbyBc()}
 function brStart(){const gs=conns.filter(Boolean);conns=[null,...gs];
  const n=Math.max(lob.n,gs.length+1,2),lv=['easy','medium','hard','impossible'],names=[],bots=[];
@@ -399,5 +409,6 @@ addEventListener('keydown',e=>{const o=$('cw').classList.contains('o');
  for(let j=0;j<16;j++){const m=document.createElement('i');m.className='mt';
   m.style.cssText=`left:${Math.random()*90-45}vmin;top:${Math.random()*70-35}vmin;animation-duration:${9+Math.random()*10}s;animation-delay:-${Math.random()*14}s`;sc.append(m)}
  $('menu').prepend(sc)})();
+{const q=new URLSearchParams(location.search).get('join');if(q&&/^[A-Za-z]{4}$/.test(q)){$('ci').value=q.toUpperCase();join()}}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
