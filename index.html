@@ -131,7 +131,7 @@ select{width:100%;padding:11px;border-radius:12px;background:#ffffff1a;color:#f4
 <div id="lset"><label>Giocatori totali<select id="ln" onchange="lobSet()"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
 <label>Difficoltà dei bot<select id="ll" onchange="lobSet()"><option value="random">Casuale</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="impossible">Impossible</option></select></label></div>
 <p id="lw">In attesa che l'host avvii la partita…</p>
-<p style="font-size:12px;opacity:.6">3 vite a testa. Continua a tirare finché imbuchi una palla (non l'8): se sbagli perdi una vita. Vince l'ultimo rimasto.</p>
+<p style="font-size:12px;opacity:.6">3 vite a testa. Continua a tirare finché imbuchi una palla: se sbagli perdi una vita. Vince l'ultimo rimasto.</p>
 <button id="lgo" onclick="brStart()">Avvia partita</button><button class="alt" onclick="quit()">Esci</button></div></div>
 <div id="pause" class="ov"><div class="card"><h1>Paused</h1><button onclick="pause(0)">Resume</button><button id="sb" onclick="toggleSnd()">Sound effects: On</button><button class="alt" onclick="quit()">Quit match</button></div></div>
 <div id="pop" class="ov"><div class="card"><h1 id="pt"></h1><p id="px"></p><button id="pbtn" onclick="closePop()">OK</button></div></div>
@@ -218,7 +218,7 @@ function net(){conn.on('data',d=>{
  else if(d.t=='quit')gone()});
  const c0=conn;conn.on('close',()=>{if(conn===c0)gone()})}
 const gone=()=>{if(inGame&&G&&G.over<0)toMenu('Your opponent left the match.');else if(!inGame){$('lobby').style.display='none';$('code').textContent='Partita non disponibile o chiusa'}};
-function start(){inGame=true;ended=false;$('ct').style.display=mode=='net'||mode=='br'?'block':'none';$('menu').style.display='none';hud()}
+function start(){mk();inGame=true;ended=false;$('ct').style.display=mode=='net'||mode=='br'?'block':'none';$('menu').style.display='none';hud()}
 function popup(t,x,b,m){$('pt').textContent=t;$('px').textContent=x;$('pbtn').textContent=b;popMenu=m;$('pop').style.display='flex'}
 function closePop(){$('pop').style.display='none';if(popMenu)toMenu()}
 function pause(v){if(!inGame||(G&&G.over>=0))return;paused=!!v;pull=null;A.p=0;$('pause').style.display=v?'flex':'none'}
@@ -255,9 +255,10 @@ function mk(){const k=dp*sc;if(!(k>0))return;TC=document.createElement('canvas')
  SP=[...Array(16).keys()].map(n=>{const c=document.createElement('canvas');c.width=c.height=Math.ceil(34*k);const x=c.getContext('2d');x.scale(k,k);ball(x,{n,x:17,y:17});return c})}
 addEventListener('resize',rs);rs();
 function ball(ctx,b){ctx.save();ctx.translate(b.x,b.y);ctx.fillStyle='#0005';ctx.beginPath();ctx.arc(3,4,R,0,7);ctx.fill();
- ctx.save();ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.clip();ctx.fillStyle=b.n>8?'#f5f3ea':col(b.n);ctx.fillRect(-R,-R,2*R,2*R);
- if(b.n>8){ctx.fillStyle=col(b.n);ctx.fillRect(-R,-R*.55,2*R,R*1.1)}ctx.restore();
- if(b.n){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,R*.46,0,7);ctx.fill();ctx.fillStyle='#000';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.n,0,.5)}
+ ctx.save();ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.clip();const br=mode=='br'&&b.n,wh=!br&&b.n>8;
+ ctx.fillStyle=br?'#7a2fd0':b.n>8?'#f5f3ea':col(b.n);ctx.fillRect(-R,-R,2*R,2*R);
+ if(wh){ctx.fillStyle=col(b.n);ctx.fillRect(-R,-R*.55,2*R,R*1.1)}ctx.restore();
+ if(b.n&&!br){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,R*.46,0,7);ctx.fill();ctx.fillStyle='#000';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.n,0,.5)}
  const g=ctx.createRadialGradient(-4,-4,1,0,0,R);g.addColorStop(0,'#fffa');g.addColorStop(.4,'#fff0');g.addColorStop(1,'#0006');
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();ctx.restore()}
 function table(ctx){let g=ctx.createLinearGradient(0,0,0,600);g.addColorStop(0,'#8a5a2c');g.addColorStop(1,'#4a2a12');
@@ -309,13 +310,13 @@ const botLvl=()=>G&&(mode=='bot'?(G.turn==1?lvl:null):mode=='br'&&conns?G.br.bot
 function nextBR(){const br=G.br,al=br.lives.map((l,i)=>l>0?i:-1).filter(i=>i>=0);
  if(al.length<=1){G.over=al.length?al[0]:0;return}
  let t=G.turn;do{t=(t+1)%br.lives.length}while(br.lives[t]<=0);G.turn=t}
-function rerack(){let i=0;const c=G.balls[0];for(let r=0;r<5;r++)for(let k=0;k<=r;k++){const b=G.balls[++i];b.in=false;b.x=700+r*21;b.y=250+(k-r/2)*24.2;b.vx=b.vy=0}
+function rerack(){const pos=[];for(let r=0;r<5;r++)for(let k=0;k<=r;k++)pos.push([700+r*21,250+(k-r/2)*24.2]);
+ const c=G.balls[0];G.balls.filter(b=>b.n).forEach((b,i)=>{b.in=false;b.x=pos[i][0];b.y=pos[i][1];b.vx=b.vy=0;b.tx=null});
  if(c.x>620){c.x=250;c.y=250}}
-function evalBR(){const m=G.turn,br=G.br,pk=S.pot,cue=G.balls[0],e=G.balls.find(b=>b.n==8);
- const scr=cue.in,ok=!scr&&S.first!=null&&!pk.includes(8)&&pk.some(n=>n>0&&n!=8)&&br.lives[m]>0;
- if(e.in){let x=700,y=250;for(let i=0;i<60&&!okPos(x,y);i++){x=640+Math.random()*300;y=40+Math.random()*420}e.x=x;e.y=y;e.in=false;e.vx=e.vy=0}
+function evalBR(){const m=G.turn,br=G.br,pk=S.pot,cue=G.balls[0];
+ const scr=cue.in,ok=!scr&&S.first!=null&&pk.some(n=>n>0)&&br.lives[m]>0;
  if(cue.in){cue.in=false;cue.x=250;cue.y=250;cue.vx=cue.vy=0}
- if(G.balls.filter(b=>b.n&&b.n!=8&&!b.in).length<2)rerack();
+ if(G.balls.filter(b=>b.n&&!b.in).length<2)rerack();
  if(!ok){br.lives[m]--;G.bih=scr;nextBR()}
  hud()}
 function drop(k){if(!G||G.over>=0||G.br.lives[k]<1)return;G.br.lives[k]=0;if(G.turn==k&&!moving)nextBR();hud();send({t:'state',s:ser()})}
@@ -353,11 +354,11 @@ function brStart(){const gs=conns.filter(Boolean);conns=[null,...gs];
  const n=Math.max(lob.n,gs.length+1,2),lv=['easy','medium','hard','impossible'],names=[],bots=[];
  for(let i=0;i<n;i++){if(i<=gs.length){names.push('Player '+(i+1));bots.push(null)}
   else{const L=lob.lvl=='random'?lv[Math.random()*4|0]:lob.lvl;names.push('Bot '+(i+1)+' ('+L+')');bots.push(L)}}
- newGame();G.br={lives:Array(n).fill(3),names,bots};me=0;mode='br';
+ newGame();rerack();G.br={lives:Array(n).fill(3),names,bots};me=0;mode='br';
  gs.forEach((c,i)=>c.send({t:'brinit',s:ser(),seat:i+1}));$('lobby').style.display='none';start()}
 let bt=0,lvl='medium';
 function botGame(l){lvl=l;mode='bot';me=0;newGame();start()}
-const legal=b=>{if(mode=='br')return b.n&&b.n!=8&&!b.in;const g=G.groups[1],t=g==null?null:left(g)?g:2;return b.n&&!b.in&&(t==null?b.n!=8:t==2?b.n==8:grp(b.n)==t)};
+const legal=b=>{if(mode=='br')return b.n&&!b.in;const g=G.groups[1],t=g==null?null:left(g)?g:2;return b.n&&!b.in&&(t==null?b.n!=8:t==2?b.n==8:grp(b.n)==t)};
 const pw=q=>Math.min(1,Math.max(.25,(q.d+q.td+200)/69.4/32));
 const clear=(ax,ay,bx,by,ex)=>{const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy||1;
  return G.balls.every(b=>b.in||ex.includes(b.n)||Math.hypot(ax+dx*Math.max(0,Math.min(1,((b.x-ax)*dx+(b.y-ay)*dy)/L))-b.x,ay+dy*Math.max(0,Math.min(1,((b.x-ax)*dx+(b.y-ay)*dy)/L))-b.y)>2*R)};
@@ -380,7 +381,7 @@ function botPlay(){const L=botLvl();if(!G||!L||moving||(paused&&mode!='br')||G.o
  const sh=botShots();let s=sh[0],a,p,pk=0;
  if(L=='easy'&&sh.length&&Math.random()<.8)s=sh[Math.random()*sh.length|0];
  if((L=='hard'||L=='impossible')&&sh.length){let bs=-9e9;const ks=L=='hard'?[1]:[.92,1.12];
-  for(const q of sh.slice(0,L=='hard'?8:10))for(const k of ks){const pp=Math.min(1,pw(q)*k),r=simShot(Math.cos(q.a)*pp*32,Math.sin(q.a)*pp*32),sc=(r.pot.includes(q.t)?3:0)-(r.cue?5:0)-(r.pot.includes(8)?9:0)+q.s;if(sc>bs){bs=sc;s=q;pk=pp}}}
+  for(const q of sh.slice(0,L=='hard'?8:10))for(const k of ks){const pp=Math.min(1,pw(q)*k),r=simShot(Math.cos(q.a)*pp*32,Math.sin(q.a)*pp*32),sc=(r.pot.includes(q.t)?3:0)-(r.cue?5:0)-(mode!='br'&&r.pot.includes(8)?9:0)+q.s;if(sc>bs){bs=sc;s=q;pk=pp}}}
  if(s){a=s.a;p=pk||pw(s)}
  else{let best=null,bd=1e9;for(const b of G.balls)if(legal(b)){const d=Math.hypot(b.x-c.x,b.y-c.y);if(d<bd){bd=d;best=b}}
   a=Math.atan2(best.y-c.y,best.x-c.x);p=G.balls.every(b=>!b.in)&&G.groups[0]==null?.95:.5}
